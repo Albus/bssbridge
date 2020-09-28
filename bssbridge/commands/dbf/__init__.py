@@ -1,4 +1,5 @@
 import asyncio
+import decimal
 import typing
 from asyncio import run, CancelledError
 from functools import partial
@@ -8,13 +9,15 @@ from typing import Optional
 import aioftp
 import aiohttp
 import lz4.block
+import sentry_sdk
 from aiohttp.client import _RequestContextManager
 from bssapi_schemas import exch
 from bssapi_schemas.odata import oDataUrl
 from bssapi_schemas.odata.InformationRegister import PacketsOfTabData, PacketsOfTabDataSources
 from bssapi_schemas.odata.error import Model as oDataError
 from cleo import Command
-from pydantic import BaseModel, StrictBool, StrictStr, AnyHttpUrl, StrBytes
+from pydantic import BaseModel, StrictBool, AnyHttpUrl, StrBytes, HttpUrl
+from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from bssbridge import LogLevel
 from bssbridge.lib.ftp import FtpUrl, get_client
@@ -29,9 +32,9 @@ class ftp2odata(Command):
       {ftp        : URL FTP сервера (ftps://username:password@server:port/path)}
       {odata      : URL oData сервера (https://username:password@server:port/path)}
       {bssapi     : Базовый URL службв BssAPI (http://10.12.1.230:8000)}
-      {--d|del    : Удалять файлы после обработки}
-      {--b|bot=?  : Токен бота телеграм (для отправки ошибок)}
-      {--c|chat=? : Идентификатор чата телеграм (для отправки ошибок)}
+      {--del      : Удалять файлы после обработки}
+      {--pause=15 : Пауза если на сервере нет файлов}
+      {--sentry=? : url логера sentry.io (https://token@host/id)}
   """
 
   class Params:
@@ -42,8 +45,19 @@ class ftp2odata(Command):
 
     class Options(BaseModel):
       delete: StrictBool = False
-      bot: Optional[StrictStr]
-      chat: Optional[StrictStr]
+      sentry: Optional[HttpUrl]
+      pause: decimal.Decimal = 15
+
+  async def capture_message(self, message: str) -> None:
+    self.line_error(message)
+    if self.Params.Options.sentry:
+      sentry_sdk.capture_message(message)
+
+  async def capture_exception(self, message: Optional[str], exception: BaseException) -> None:
+    if message:
+      self.line_error(message)
+    if self.Params.Options.sentry:
+      sentry_sdk.capture_exception(exception)
 
   def repeat(fn):
     async def wrapper(self, func=fn, *args, **kwargs):
@@ -91,8 +105,10 @@ class ftp2odata(Command):
             self.line("Файл {filename} удален".format(filename=path))
           else:
             self.line("Не удалось удалить файл {filename} так как он не существует".format(filename=path))
-        except:
-          self.line_error("Ошибка при удалении файла {filename}".format(filename=path))
+        except BaseException as exc:
+          await self.capture_exception(
+            message="Ошибка при удалении файла {filename}".format(filename=path),
+            exception=exc)
 
     async def get_packet_from_parser() -> _RequestContextManager:
       data = aiohttp.FormData()
@@ -128,19 +144,20 @@ class ftp2odata(Command):
         self.line("Файл переименован на сервере: {filename} -> {new_filename}".format(
           filename=path, new_filename=path.with_suffix('.error').name
         ))
-      except:
-        self.line_error("Не удалось переименовать файл на сервере: {filename} -> {new_filename}".format(
-          filename=path, new_filename=path.with_suffix('.error')
-        ))
+      except BaseException as exc:
+        await self.capture_exception(
+          message="Не удалось переименовать файл на сервере: {filename} -> {new_filename}".format(
+            filename=path, new_filename=path.with_suffix('.error')),
+          exception=exc)
 
-    async def return_repeat(pause: Optional[float] = None, repeat: bool = False) -> bool:
-      if pause:
+    async def return_repeat(pause: Optional[float] = float(self.Params.Options.pause), repeat: bool = False) -> bool:
+      if repeat and pause:
         self.line("Пауза: {pause} сек.".format(pause=pause))
         await asyncio.sleep(pause)
       return repeat
 
     do_repeat = partial(return_repeat, repeat=True)
-    dont_repeat = partial(return_repeat, repeat=False, pause=0)
+    dont_repeat = partial(return_repeat, repeat=False, pause=None)
 
     # Нужно 2 клиента FTP. Первый для листинга, второй для операций
 
@@ -168,8 +185,8 @@ class ftp2odata(Command):
                         format=exch.FormatPacket.parse_raw(
                           b=await resp.text(), content_type=resp.content_type))
 
-                    except:  # не удалось всунуть ответ в ожидаемую модель
-                      self.line_error("Не удалось прочитать ответ паресера")
+                    except BaseException as exc:  # не удалось всунуть ответ в ожидаемую модель
+                      await self.capture_exception(message="Не удалось прочитать ответ паресера", exception=exc)
 
                     else:  # ответ прочитан, будем писать в odata
                       async with await save_format_to_odata() as resp:
@@ -181,27 +198,28 @@ class ftp2odata(Command):
                           try:  # пытаемся всунуть ответ в модель
                             error_msg = oDataError.parse_raw(await resp.text(), content_type=resp.content_type)
 
-                          except:  # ответ не соответствует модели, ничего не делаем, идем к следуюущему файлу
-                            self.line_error("Не удалось получить описание ошибки oData")
+                          except BaseException as exc:  # ответ не соответствует модели, ничего не делаем, идем к следуюущему файлу
+                            await self.capture_exception(
+                              message="Не удалось получить описание ошибки oData", exception=exc)
                             continue
 
                           else:  # ответ прочитан в модель, посмотрим что случилось
                             if not error_msg.error.code == "15":  # Запись с такими полями уже существует
-                              self.line_error("Ошибка при сохранении формата: {error}".format(
+                              await self.capture_message("Ошибка при сохранении формата: {error}".format(
                                 error=error_msg.error.message.value))
 
                   elif resp.status == 422:  # парсер не принял параметры запроса, такого в принципе не должно быть
                     continue
 
                   else:  # парсер не должен давать коды кроме 200 и 422
-                    self.line_error("Не ожиданный ответ парсера")
+                    await self.capture_message("Не ожиданный ответ парсера")
 
               except CancelledError:
                 self.line(text="Прерывание обращения к парсеру")
                 return dont_repeat
 
-              except:  # какаято техническая ошибка парсера
-                self.line_error("Не удалось получить формат от парсера")
+              except BaseException as exc:  # какаято техническая ошибка парсера
+                await self.capture_exception(message="Не удалось получить формат от парсера", exception=exc)
 
               else:  # обработка пакета данных
 
@@ -212,11 +230,10 @@ class ftp2odata(Command):
 
                       try:  # читаем ответ парсера в объект пакета данных
                         packet_of_tab_data = PacketsOfTabData(
-                          packet=exch.Packet.parse_raw(
-                            b=await resp.text(), content_type=resp.content_type))
+                          packet=exch.Packet.parse_raw(b=await resp.text(), content_type=resp.content_type))
 
-                      except:  # не удалось всунуть ответ в ожидаемую модель
-                        self.line_error("Не удалось прочитать ответ паресера")
+                      except BaseException as exc:  # не удалось всунуть ответ в ожидаемую модель
+                        await self.capture_exception(message="Не удалось прочитать ответ паресера", exception=exc)
                         continue  # оставим все как есть видимо чтото не так с моделью
 
                       else:  # ответ прочитан, будем писать в odata
@@ -231,14 +248,16 @@ class ftp2odata(Command):
                             try:  # пытаемся всунуть ответ в модель
                               error_msg = oDataError.parse_raw(await resp.text(), content_type=resp.content_type)
 
-                            except:  # ответ не соответствует модели, ничего не делаем, идем к следуюущему файлу
-                              self.line_error("Не удалось получить описание ошибки oData")
+                            except BaseException as exc:  # ответ не соответствует модели, ничего не делаем, идем к следуюущему файлу
+                              await self.capture_exception(
+                                message="Не удалось получить описание ошибки oData", exception=exc)
                               continue
 
                             else:  # ответ прочитан в модель, посмотрим что случилось
-                              self.line_error("Не удалось импортировать: {hash}{filename}: {message}".format(
-                                filename=path, message=error_msg.error.message.value,
-                                hash=packet_of_tab_data.Hash))
+                              await self.capture_message(
+                                message="Не удалось импортировать: {hash}{filename}: {message}".format(
+                                  filename=path, message=error_msg.error.message.value, hash=packet_of_tab_data.Hash))
+
                               if error_msg.error.code == "15":  # Запись с такими полями уже существует
                                 await delete()  # файл уже импортирован, теперь его надо удалить с сервера
                                 continue
@@ -247,28 +266,28 @@ class ftp2odata(Command):
                       continue
 
                     else:  # парсер не должен давать коды кроме 200 и 422
-                      self.line_error("Не ожиданный ответ парсера")
+                      await self.capture_message("Не ожиданный ответ парсера")
                       continue
 
                 except CancelledError:
                   self.line(text="Прерывание обращения к парсеру")
                   return dont_repeat
 
-                except:  # какаято техническая ошибка парсера
-                  self.line_error("Не удалось обратиться к паресеру")
+                except BaseException as exc:  # какаято техническая ошибка парсера
+                  await self.capture_exception(message="Не удалось обратиться к паресеру", exception=exc)
 
         else:
           try:
-            return do_repeat(pause=0 if info else 5)
+            return do_repeat(pause=0 if info else float(self.Params.Options.pause))
           except:
             pass
 
-      except:
-        self.line_error("Не удалось получить листинг FTP каталога")
+      except BaseException as exc:
+        await self.capture_exception(message="Не удалось получить листинг FTP каталога", exception=exc)
     try:
       return dont_repeat
     except:
-      pass
+      await self.capture_exception(message=None, exception=exc)
 
   def handle(self):
 
@@ -298,6 +317,9 @@ class ftp2odata(Command):
         del val
       except UnboundLocalError:
         pass
+
+      if self.Params.Options.sentry:
+        sentry_sdk.init(dsn=self.Params.Options.sentry, traces_sample_rate=1.0, integrations=[AioHttpIntegration()])
 
       try:
         run(self.download())
