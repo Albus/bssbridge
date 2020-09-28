@@ -27,14 +27,13 @@ class ftp2odata(Command):
   """
   Трансфер файлов DBF с FTP на сервера 1C:oData
 
-
   dbf_ftp2odata
       {ftp        : URL FTP сервера (ftps://username:password@server:port/path)}
       {odata      : URL oData сервера (https://username:password@server:port/path)}
-      {bssapi     : Базовый URL службв BssAPI (http://10.12.1.230:8000)}
+      {bssapi     : Базовый URL службв BssAPI (http://username:password@server:port)}
       {--del      : Удалять файлы после обработки}
       {--pause=15 : Пауза если на сервере нет файлов}
-      {--sentry=? : url логера sentry.io (https://token@host/id)}
+      {--sentry= : URL логера sentry.io (https://token@host/id)}
   """
 
   class Params:
@@ -326,5 +325,4 @@ class ftp2odata(Command):
       except CancelledError:
         pass
 
-  def default(self, default=True):
-    pass
+

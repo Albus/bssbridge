@@ -15,6 +15,4 @@ def main() -> None:
 
   from cleo import Application
   from bssbridge.commands.dbf import ftp2odata as dbf_ftp2odata
-  app = Application(name="bb", version=__version__, complete=True)
-  app.add(command=dbf_ftp2odata())
-  app.run()
+  Application(name="bb", version=__version__, complete=True).add(command=dbf_ftp2odata()).run()
