@@ -133,19 +133,6 @@ version = "0.3.1"
 
 [[package]]
 category = "main"
-description = "Read DBF Files with Python"
-name = "dbfread"
-optional = false
-python-versions = "*"
-version = "2.0.7.2"
-
-[package.source]
-reference = "a7ad038ff646f6674e8c88f77088bf9d4eb3f696"
-type = "git"
-url = "https://github.com/rysson/dbfread.git"
-
-[[package]]
-category = "main"
 description = "Internationalized Domain Names in Applications (IDNA)"
 name = "idna"
 optional = false
@@ -308,7 +295,7 @@ idna = ">=2.0"
 multidict = ">=4.0"
 
 [metadata]
-content-hash = "171d8d2b37ffa1d190b24e50ba7bdf37bad608e4a1f386ecb47558bc3f3833a6"
+content-hash = "da43253342f320c5c0b999b6819d9a991dc7ca81947d5bc7bb7c65e3b411f14f"
 lock-version = "1.0"
 python-versions = "^3.8"
 
@@ -373,7 +360,6 @@ crashtest = [
     {file = "crashtest-0.3.1-py3-none-any.whl", hash = "sha256:300f4b0825f57688b47b6d70c6a31de33512eb2fa1ac614f780939aa0cf91680"},
     {file = "crashtest-0.3.1.tar.gz", hash = "sha256:42ca7b6ce88b6c7433e2ce47ea884e91ec93104a4b754998be498a8e6c3d37dd"},
 ]
-dbfread = []
 idna = [
     {file = "idna-2.10-py2.py3-none-any.whl", hash = "sha256:b97d804b1e9b523befed77c48dacec60e6dcb0b5391d57af6a65a312a90648c0"},
     {file = "idna-2.10.tar.gz", hash = "sha256:b307872f855b18632ce0c21c5e45be78c0ea7ae4c15c828c20788b26921eb3f6"},

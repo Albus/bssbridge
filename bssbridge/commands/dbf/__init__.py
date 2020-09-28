@@ -1,3 +1,4 @@
+import typing
 from asyncio import run, CancelledError
 from pathlib import PurePosixPath
 from typing import Optional
@@ -5,17 +6,17 @@ from typing import Optional
 import aioftp
 import aiohttp
 import lz4.block
-import typing
 from aiohttp.client import _RequestContextManager
 from bssapi_schemas import exch
 from bssapi_schemas.odata import oDataUrl
 from bssapi_schemas.odata.InformationRegister import PacketsOfTabData, PacketsOfTabDataSources
 from bssapi_schemas.odata.error import Model as oDataError
 from cleo import Command
-from pydantic import BaseModel, StrictBool, StrictStr
+from pydantic import BaseModel, StrictBool, StrictStr, AnyHttpUrl, StrBytes
 
 from bssbridge import LogLevel
 from bssbridge.lib.ftp import FtpUrl, get_client
+from lib import periodic
 
 
 class ftp2odata(Command):
@@ -26,6 +27,7 @@ class ftp2odata(Command):
   dbf_ftp2odata
       {ftp        : URL FTP сервера (ftps://username:password@server:port/path)}
       {odata      : URL oData сервера (https://username:password@server:port/path)}
+      {bssapi     : Базовый URL службв BssAPI (http://10.12.1.230:8000)}
       {--d|del    : Удалять файлы после обработки}
       {--b|bot=?  : Токен бота телеграм (для отправки ошибок)}
       {--c|chat=? : Идентификатор чата телеграм (для отправки ошибок)}
@@ -35,13 +37,15 @@ class ftp2odata(Command):
     class Arguments(BaseModel):
       ftp: FtpUrl
       odata: oDataUrl
+      bssapi: AnyHttpUrl
 
     class Options(BaseModel):
       delete: StrictBool = False
       bot: Optional[StrictStr]
       chat: Optional[StrictStr]
 
-  async def download(self, url: FtpUrl):
+  @periodic(20)
+  async def download(self):
 
     client1: aioftp.Client
     client2: aioftp.Client
@@ -50,6 +54,7 @@ class ftp2odata(Command):
     resp: aiohttp.ClientResponse
     path: PurePosixPath
     info: typing.Dict
+    dbf_content: StrBytes
 
     async def delete() -> None:
       if self.Params.Options.delete:
@@ -65,8 +70,8 @@ class ftp2odata(Command):
                      value=lz4.block.compress(mode='fast', source=dbf_content),
                      filename=path.name, content_transfer_encoding='base64')
       return session.post(
-        url='http://10.12.1.230:8000/parser/dbf/source',
-        data=data, chunked=1000, compress=False, params={'url': url})
+        url='{base_bssapi_url}/parser/dbf/source'.format(base_bssapi_url=self.Params.Arguments.bssapi),
+        data=data, chunked=1000, compress=False, params={'url': self.Params.Arguments.ftp})
 
     async def get_format_from_parser() -> _RequestContextManager:
       data = aiohttp.FormData()
@@ -74,8 +79,8 @@ class ftp2odata(Command):
                      value=lz4.block.compress(mode='fast', source=dbf_content),
                      filename=path.name, content_transfer_encoding='base64')
       return session.post(
-        url='http://10.12.1.230:8000/parser/dbf/format',
-        data=data, chunked=1000, compress=False, params={'url': url})
+        url='{base_bssapi_url}/parser/dbf/format'.format(base_bssapi_url=self.Params.Arguments.bssapi),
+        data=data, chunked=1000, compress=False, params={'url': self.Params.Arguments.ftp})
 
     async def save_packet_to_odata() -> _RequestContextManager:
       return session.post(url=packet_of_tab_data.path(
@@ -98,88 +103,117 @@ class ftp2odata(Command):
           filename=path, new_filename=path.with_suffix('.error')
         ))
 
+    # Нужно 2 клиента FTP. Первый для листинга, второй для операций
     async with \
-       get_client(url) as client1, get_client(url) as client2, \
+       get_client(self.Params.Arguments.ftp) as client1, get_client(self.Params.Arguments.ftp) as client2, \
        aiohttp.ClientSession(connector=aiohttp.TCPConnector(
          ssl=None, force_close=True, enable_cleanup_closed=True)) as session:
 
-      try:
+      try:  # Берем итератор файлов на сервере
         async for path, info in \
-           client1.list(recursive=False, path=url.path):  # TODO: обработать рекурсивный режим
+           client1.list(recursive=False, path=self.Params.Arguments.ftp.path):  # TODO: обработать рекурсивный режим
 
           if info["type"] == "file" and path.suffix == ".dbf" and info['size']:
-            async with client2.download_stream(source=path) as stream:
+            async with client2.download_stream(source=path) as stream:  # получаем поток загружаемого файла
 
-              dbf_content = await stream.read()
+              dbf_content = await stream.read()  # читаем поток в строку байт
 
-              try:
+              try:  # получаем формат от парсера
                 async with await get_format_from_parser() as resp:
-                  if resp.status == 200:
-                    try:
+
+                  if resp.status == 200:  # код ответа при нормальной обработке пакета
+
+                    try:  # читаем ответ парсера в объект формата пакета
                       format_of_tab_data = PacketsOfTabDataSources(
                         format=exch.FormatPacket.parse_raw(
                           b=await resp.text(), content_type=resp.content_type))
-                    except:
+
+                    except:  # не удалось всунуть ответ в ожидаемую модель
                       self.line_error("Не удалось прочитать ответ паресера")
-                    else:
+
+                    else:  # ответ прочитан, будем писать в odata
                       async with await save_format_to_odata() as resp:
-                        if resp.status == 200:
+
+                        if resp.status == 200:  # odata отвечает 200 если все прошло хорошо
                           self.line("Импортирован формат {filename}".format(filename=path))
-                        else:
-                          try:
+
+                        else:  # odata сообщаяет об ошибке будем ее анализировать
+                          try:  # пытаемся всунуть ответ в модель
                             error_msg = oDataError.parse_raw(await resp.text(), content_type=resp.content_type)
-                          except:
+
+                          except:  # ответ не соответствует модели, ничего не делаем, идем к следуюущему файлу
                             self.line_error("Не удалось получить описание ошибки oData")
-                          else:
+                            continue
+
+                          else:  # ответ прочитан в модель, посмотрим что случилось
                             if not error_msg.error.code == "15":  # Запись с такими полями уже существует
                               self.line_error("Ошибка при сохранении формата: {error}".format(
                                 error=error_msg.error.message.value))
-                  elif resp.status == 422:
-                    await mark_file_with_error()
+
+                  elif resp.status == 422:  # парсер не принял параметры запроса, такого в принципе не должно быть
                     continue
-                  else:
+
+                  else:  # парсер не должен давать коды кроме 200 и 422
                     self.line_error("Не ожиданный ответ парсера")
-              except:
+
+              except:  # какаято техническая ошибка парсера
                 self.line_error("Не удалось получить формат от парсера")
 
-              try:
-                async with await get_packet_from_parser() as resp:
-                  if resp.status == 200:
-                    try:
-                      packet_of_tab_data = PacketsOfTabData(
-                        packet=exch.Packet.parse_raw(
-                          b=await resp.text(), content_type=resp.content_type))
-                    except:
-                      self.line_error("Не удалось прочитать ответ паресера")
-                    else:
-                      async with await save_packet_to_odata() as resp:
-                        if resp.status == 200:
-                          self.line("Импортирован файл {filename}".format(filename=path))
-                        else:
+              else:  # обработка пакета данных
 
-                          try:
-                            error_msg = oDataError.parse_raw(await resp.text(), content_type=resp.content_type)
-                          except:
-                            self.line_error("Не удалось получить описание ошибки oData")
-                          else:
-                            self.line_error("Не удалось импортировать: {hash}{filename}: {message}".format(
-                              filename=path, message=error_msg.error.message.value,
-                              hash=packet_of_tab_data.Hash))
-                            if error_msg.error.code == "15":  # Запись с такими полями уже существует
-                              await delete()
+                try:  # получаем пакет данных от парсера
+                  async with await get_packet_from_parser() as resp:
+
+                    if resp.status == 200:  # код ответа при нормальной обработке пакета
+
+                      try:  # читаем ответ парсера в объект пакета данных
+                        packet_of_tab_data = PacketsOfTabData(
+                          packet=exch.Packet.parse_raw(
+                            b=await resp.text(), content_type=resp.content_type))
+
+                      except:  # не удалось всунуть ответ в ожидаемую модель
+                        self.line_error("Не удалось прочитать ответ паресера")
+                        continue  # оставим все как есть видимо чтото не так с моделью
+
+                      else:  # ответ прочитан, будем писать в odata
+                        async with await save_packet_to_odata() as resp:
+
+                          if resp.status == 200:  # odata отвечает 200 если все прошло хорошо
+                            self.line("Импортирован файл {filename}".format(filename=path))
+                            await delete()  # файл импортирован, теперь его надо удалить с сервера
+                            continue
+
+                          else:  # odata сообщаяет об ошибке будем ее анализировать
+                            try:  # пытаемся всунуть ответ в модель
+                              error_msg = oDataError.parse_raw(await resp.text(), content_type=resp.content_type)
+
+                            except:  # ответ не соответствует модели, ничего не делаем, идем к следуюущему файлу
+                              self.line_error("Не удалось получить описание ошибки oData")
                               continue
 
-                  elif resp.status == 422:
-                    await mark_file_with_error()
-                    continue
-                  else:
-                    self.line_error("Не ожиданный ответ парсера")
-              except:
-                self.line_error("Не удалось обратиться к паресеру")
+                            else:  # ответ прочитан в модель, посмотрим что случилось
+                              self.line_error("Не удалось импортировать: {hash}{filename}: {message}".format(
+                                filename=path, message=error_msg.error.message.value,
+                                hash=packet_of_tab_data.Hash))
+                              if error_msg.error.code == "15":  # Запись с такими полями уже существует
+                                await delete()  # файл уже импортирован, теперь его надо удалить с сервера
+                                continue
+
+                    elif resp.status == 422:  # парсер не принял параметры запроса, такого в принципе не должно быть
+                      continue
+
+                    else:  # парсер не должен давать коды кроме 200 и 422
+                      self.line_error("Не ожиданный ответ парсера")
+                      continue
+
+                except:  # какаято техническая ошибка парсера
+                  self.line_error("Не удалось обратиться к паресеру")
+
       except:
         self.line_error("Не удалось получить листинг FTP каталога")
 
   def handle(self):
+
     params = {self.Params.Arguments: self.Params.Arguments(**self.argument()).dict(),
               self.Params.Options: self.Params.Options(**self.option()).dict()}
     rows = []
@@ -208,7 +242,7 @@ class ftp2odata(Command):
         pass
 
       try:
-        run(self.download(url=self.Params.Arguments.ftp))
+        run(self.download())
       except CancelledError:
         pass
 
