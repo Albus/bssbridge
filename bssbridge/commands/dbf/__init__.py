@@ -1,5 +1,7 @@
+import asyncio
 import typing
 from asyncio import run, CancelledError
+from functools import partial
 from pathlib import PurePosixPath
 from typing import Optional
 
@@ -16,7 +18,6 @@ from pydantic import BaseModel, StrictBool, StrictStr, AnyHttpUrl, StrBytes
 
 from bssbridge import LogLevel
 from bssbridge.lib.ftp import FtpUrl, get_client
-from lib import periodic
 
 
 class ftp2odata(Command):
@@ -44,7 +45,33 @@ class ftp2odata(Command):
       bot: Optional[StrictStr]
       chat: Optional[StrictStr]
 
-  @periodic(20)
+  def repeat(fn):
+    async def wrapper(self, func=fn, *args, **kwargs):
+      import asyncio
+      while True:
+        try:
+          task = asyncio.create_task(coro=func(self, *args, **kwargs))
+        except Exception as exc:
+          raise
+        else:
+          while True:
+            try:
+              repeat = await task.result()
+            except asyncio.InvalidStateError:
+              await asyncio.sleep(0.2)
+              continue
+            except:
+              return
+            else:
+              self.line("Новая итерация")
+              if repeat:
+                break
+              else:
+                return
+
+    return wrapper
+
+  @repeat
   async def download(self):
 
     client1: aioftp.Client
@@ -59,8 +86,11 @@ class ftp2odata(Command):
     async def delete() -> None:
       if self.Params.Options.delete:
         try:
-          await client2.remove_file(path=path)
-          self.line("Файл {filename} удален".format(filename=path))
+          if await client2.exists(path=path):
+            await client2.remove_file(path=path)
+            self.line("Файл {filename} удален".format(filename=path))
+          else:
+            self.line("Не удалось удалить файл {filename} так как он не существует".format(filename=path))
         except:
           self.line_error("Ошибка при удалении файла {filename}".format(filename=path))
 
@@ -103,7 +133,17 @@ class ftp2odata(Command):
           filename=path, new_filename=path.with_suffix('.error')
         ))
 
+    async def return_repeat(pause: Optional[float] = None, repeat: bool = False) -> bool:
+      if pause:
+        self.line("Пауза: {pause} сек.".format(pause=pause))
+        await asyncio.sleep(pause)
+      return repeat
+
+    do_repeat = partial(return_repeat, repeat=True)
+    dont_repeat = partial(return_repeat, repeat=False, pause=0)
+
     # Нужно 2 клиента FTP. Первый для листинга, второй для операций
+
     async with \
        get_client(self.Params.Arguments.ftp) as client1, get_client(self.Params.Arguments.ftp) as client2, \
        aiohttp.ClientSession(connector=aiohttp.TCPConnector(
@@ -156,6 +196,10 @@ class ftp2odata(Command):
                   else:  # парсер не должен давать коды кроме 200 и 422
                     self.line_error("Не ожиданный ответ парсера")
 
+              except CancelledError:
+                self.line(text="Прерывание обращения к парсеру")
+                return dont_repeat
+
               except:  # какаято техническая ошибка парсера
                 self.line_error("Не удалось получить формат от парсера")
 
@@ -206,11 +250,25 @@ class ftp2odata(Command):
                       self.line_error("Не ожиданный ответ парсера")
                       continue
 
+                except CancelledError:
+                  self.line(text="Прерывание обращения к парсеру")
+                  return dont_repeat
+
                 except:  # какаято техническая ошибка парсера
                   self.line_error("Не удалось обратиться к паресеру")
 
+        else:
+          try:
+            return do_repeat(pause=0 if info else 5)
+          except:
+            pass
+
       except:
         self.line_error("Не удалось получить листинг FTP каталога")
+    try:
+      return dont_repeat
+    except:
+      pass
 
   def handle(self):
 
