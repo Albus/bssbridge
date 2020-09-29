@@ -2,3 +2,4 @@
 /.venv/
 /bssbridge.egg-info
 /dist/
+/.github/
