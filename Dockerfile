@@ -21,4 +21,4 @@ RUN poetry install && poetry update \
 
 STOPSIGNAL SIGINT
 ENTRYPOINT ["bb"]
-CMD["help"]
+CMD ["help"]
