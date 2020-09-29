@@ -1,29 +1,25 @@
 import asyncio
 import decimal
 import typing
-from asyncio import run, CancelledError
-from functools import partial
-from pathlib import PurePosixPath
-from typing import Optional
-
+import cleo
 import aioftp
 import aiohttp
 import lz4.block
 import sentry_sdk
-from aiohttp.client import _RequestContextManager
+import functools
+import pathlib
+import pydantic
+
 from bssapi_schemas import exch
 from bssapi_schemas.odata import oDataUrl
 from bssapi_schemas.odata.InformationRegister import PacketsOfTabData, PacketsOfTabDataSources
 from bssapi_schemas.odata.error import Model as oDataError
-from cleo import Command
-from pydantic import BaseModel, StrictBool, AnyHttpUrl, StrBytes, HttpUrl
-from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from bssbridge import LogLevel
 from bssbridge.lib.ftp import FtpUrl, get_client
 
 
-class ftp2odata(Command):
+class ftp2odata(cleo.Command):
   """
   Трансфер файлов DBF с FTP на сервера 1C:oData
 
@@ -37,14 +33,14 @@ class ftp2odata(Command):
   """
 
   class Params:
-    class Arguments(BaseModel):
+    class Arguments(pydantic.BaseModel):
       ftp: FtpUrl
       odata: oDataUrl
-      bssapi: AnyHttpUrl
+      bssapi: pydantic.AnyHttpUrl
 
-    class Options(BaseModel):
-      delete: StrictBool = False
-      sentry: Optional[HttpUrl]
+    class Options(pydantic.BaseModel):
+      delete: pydantic.StrictBool = False
+      sentry: typing.Optional[pydantic.HttpUrl]
       pause: decimal.Decimal = 15
 
   async def capture_message(self, message: str) -> None:
@@ -52,7 +48,7 @@ class ftp2odata(Command):
     if self.Params.Options.sentry:
       sentry_sdk.capture_message(message)
 
-  async def capture_exception(self, message: Optional[str], exception: BaseException) -> None:
+  async def capture_exception(self, message: typing.Optional[str], exception: BaseException) -> None:
     if message:
       self.line_error(message)
     if self.Params.Options.sentry:
@@ -92,9 +88,9 @@ class ftp2odata(Command):
     session: aiohttp.ClientSession
     stream: aioftp.DataConnectionThrottleStreamIO
     resp: aiohttp.ClientResponse
-    path: PurePosixPath
+    path: pathlib.PurePosixPath
     info: typing.Dict
-    dbf_content: StrBytes
+    dbf_content: pydantic.StrBytes
 
     async def delete() -> None:
       if self.Params.Options.delete:
@@ -109,7 +105,7 @@ class ftp2odata(Command):
             message="Ошибка при удалении файла {filename}".format(filename=path),
             exception=exc)
 
-    async def get_packet_from_parser() -> _RequestContextManager:
+    async def get_packet_from_parser() -> aiohttp.client._RequestContextManager:
       data = aiohttp.FormData()
       data.add_field(name="file", content_type="application/octet-stream;lz4;base64",
                      value=lz4.block.compress(mode='fast', source=dbf_content),
@@ -118,7 +114,7 @@ class ftp2odata(Command):
         url='{base_bssapi_url}/parser/dbf/source'.format(base_bssapi_url=self.Params.Arguments.bssapi),
         data=data, chunked=1000, compress=False, params={'url': self.Params.Arguments.ftp})
 
-    async def get_format_from_parser() -> _RequestContextManager:
+    async def get_format_from_parser() -> aiohttp.client._RequestContextManager:
       data = aiohttp.FormData()
       data.add_field(name="file", content_type="application/octet-stream;lz4;base64",
                      value=lz4.block.compress(mode='fast', source=dbf_content),
@@ -127,12 +123,12 @@ class ftp2odata(Command):
         url='{base_bssapi_url}/parser/dbf/format'.format(base_bssapi_url=self.Params.Arguments.bssapi),
         data=data, chunked=1000, compress=False, params={'url': self.Params.Arguments.ftp})
 
-    async def save_packet_to_odata() -> _RequestContextManager:
+    async def save_packet_to_odata() -> aiohttp.client._RequestContextManager:
       return session.post(url=packet_of_tab_data.path(
         base_url=self.Params.Arguments.odata), data=packet_of_tab_data.json(),
         headers={'Content-type': 'application/json'})
 
-    async def save_format_to_odata() -> _RequestContextManager:
+    async def save_format_to_odata() -> aiohttp.client._RequestContextManager:
       return session.post(url=format_of_tab_data.path(
         base_url=self.Params.Arguments.odata), data=format_of_tab_data.json(),
         headers={'Content-type': 'application/json'})
@@ -149,14 +145,14 @@ class ftp2odata(Command):
             filename=path, new_filename=path.with_suffix('.error')),
           exception=exc)
 
-    async def return_repeat(pause: Optional[float] = float(self.Params.Options.pause), repeat: bool = False) -> bool:
+    async def return_repeat(pause: typing.Optional[float] = float(self.Params.Options.pause), repeat: bool = False) -> bool:
       if repeat and pause:
         self.line("Пауза: {pause} сек.".format(pause=pause))
         await asyncio.sleep(pause)
       return repeat
 
-    do_repeat = partial(return_repeat, repeat=True)
-    dont_repeat = partial(return_repeat, repeat=False, pause=None)
+    do_repeat = functools.partial(return_repeat, repeat=True)
+    dont_repeat = functools.partial(return_repeat, repeat=False, pause=None)
 
     # Нужно 2 клиента FTP. Первый для листинга, второй для операций
 
@@ -213,7 +209,7 @@ class ftp2odata(Command):
                   else:  # парсер не должен давать коды кроме 200 и 422
                     await self.capture_message("Не ожиданный ответ парсера")
 
-              except CancelledError:
+              except asyncio.CancelledError:
                 self.line(text="Прерывание обращения к парсеру")
                 return dont_repeat
 
@@ -268,7 +264,7 @@ class ftp2odata(Command):
                       await self.capture_message("Не ожиданный ответ парсера")
                       continue
 
-                except CancelledError:
+                except asyncio.CancelledError:
                   self.line(text="Прерывание обращения к парсеру")
                   return dont_repeat
 
@@ -318,11 +314,12 @@ class ftp2odata(Command):
         pass
 
       if self.Params.Options.sentry:
-        sentry_sdk.init(dsn=self.Params.Options.sentry, traces_sample_rate=1.0, integrations=[AioHttpIntegration()])
+        sentry_sdk.init(dsn=self.Params.Options.sentry, traces_sample_rate=1.0,
+                        integrations=[sentry_sdk.integrations.aiohttp.AioHttpIntegration()])
 
       try:
-        run(self.download())
-      except CancelledError:
+        asyncio.run(self.download())
+      except asyncio.CancelledError:
         pass
 
 
