@@ -3,7 +3,7 @@ FROM python:3.8-buster
 ENV TZ=Europe/Moscow \
     POETRY_NO_INTERACTION=1 \
     POETRY_NO_DEV=1 \
-    PYTHONPATH=${PYTHONPATH}:/app \
+    PYTHONPATH=${PYTHONPATH}:/app
 
 RUN pip install --no-cache-dir --quiet --upgrade pip poetry \
     && poetry config virtualenvs.create true \
