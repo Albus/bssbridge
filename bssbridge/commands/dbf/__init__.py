@@ -29,7 +29,7 @@ class ftp2odata(cleo.Command):
   dbf_ftp2odata
       {ftp        : URL FTP сервера (ftps://username:password@server:port/path)}
       {odata      : URL oData сервера (https://username:password@server:port/path)}
-      {bssapi     : Базовый URL службв BssAPI (http://username:password@server:port)}
+      {bssapi     : Базовый URL службы BssAPI (http://username:password@server:port)}
       {--del      : Удалять файлы после обработки}
       {--pause=15 : Пауза если на сервере нет файлов}
       {--sentry= : URL логера sentry.io (https://token@host/id)}
