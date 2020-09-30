@@ -1,19 +1,22 @@
-import asyncio
+# -*- coding: utf-8 -*-
+
 import decimal
-import typing
-import cleo
-import aioftp
-import aiohttp
-import lz4.block
-import sentry_sdk
 import functools
 import pathlib
-import pydantic
+import typing
 
+import aioftp
+import aiohttp
+import asyncio
+import cleo
+import lz4.block
+import pydantic
+import sentry_sdk
 from bssapi_schemas import exch
 from bssapi_schemas.odata import oDataUrl
 from bssapi_schemas.odata.InformationRegister import PacketsOfTabData, PacketsOfTabDataSources
 from bssapi_schemas.odata.error import Model as oDataError
+from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from bssbridge import LogLevel
 from bssbridge.lib.ftp import FtpUrl, get_client
@@ -57,6 +60,7 @@ class ftp2odata(cleo.Command):
   def repeat(fn):
     async def wrapper(self, func=fn, *args, **kwargs):
       import asyncio
+      count: int = 1
       while True:
         try:
           task = asyncio.create_task(coro=func(self, *args, **kwargs))
@@ -72,7 +76,8 @@ class ftp2odata(cleo.Command):
             except:
               return
             else:
-              self.line("Новая итерация")
+              count += 1
+              self.line("Итерация #{number}".format(number=str(count).zfill(19)))
               if repeat:
                 break
               else:
@@ -145,7 +150,8 @@ class ftp2odata(cleo.Command):
             filename=path, new_filename=path.with_suffix('.error')),
           exception=exc)
 
-    async def return_repeat(pause: typing.Optional[float] = float(self.Params.Options.pause), repeat: bool = False) -> bool:
+    async def return_repeat(pause: typing.Optional[float] = float(self.Params.Options.pause),
+                            repeat: bool = False) -> bool:
       if repeat and pause:
         self.line("Пауза: {pause} сек.".format(pause=pause))
         await asyncio.sleep(pause)
@@ -315,11 +321,9 @@ class ftp2odata(cleo.Command):
 
       if self.Params.Options.sentry:
         sentry_sdk.init(dsn=self.Params.Options.sentry, traces_sample_rate=1.0,
-                        integrations=[sentry_sdk.integrations.aiohttp.AioHttpIntegration()])
+                        integrations=[AioHttpIntegration()])
 
       try:
         asyncio.run(self.download())
       except asyncio.CancelledError:
         pass
-
-
