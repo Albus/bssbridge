@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "BssBridge"
-version = "0.1.6"
+version = "0.1.7"
 description = "Робот доставки данных в систему BSS"
 authors = ["Anton Rastyazhenko <rastyazhenko.anton@gmail.com>"]
 

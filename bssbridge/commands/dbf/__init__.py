@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 import decimal
 import functools
 import pathlib
@@ -7,7 +8,6 @@ import typing
 
 import aioftp
 import aiohttp
-import asyncio
 import cleo
 import lz4.block
 import pydantic
@@ -100,15 +100,15 @@ class ftp2odata(cleo.Command):
         async def delete() -> None:
             if self.Params.Options.delete:
                 try:
-                    if await client2.exists(path=path):
+                    try:
                         await client2.remove_file(path=path)
-                        self.line("Файл {filename} удален".format(filename=path))
-                    else:
-                        self.line("Не удалось удалить файл {filename} так как он не существует".format(filename=path))
-                except BaseException as exc:
+                    except aioftp.StatusCodeError as err:
+                        if aioftp.Code('550') not in err.received_codes:
+                            raise err
+                except BaseException as err:
                     await self.capture_exception(
                         message="Ошибка при удалении файла {filename}".format(filename=path),
-                        exception=exc)
+                        exception=err)
 
         async def get_packet_from_parser() -> aiohttp.client._RequestContextManager:
             data = aiohttp.FormData()
@@ -308,7 +308,6 @@ class ftp2odata(cleo.Command):
             await self.capture_exception(message=None, exception=exc)
 
     def handle(self):
-
         params = {self.Params.Arguments: self.Params.Arguments(**self.argument()).dict(),
                   self.Params.Options: self.Params.Options(**self.option()).dict()}
         rows = []
