@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 
 from typing import Any, Optional, Callable
 
@@ -30,4 +30,7 @@ def main() -> None:
 
     from cleo import Application
     from bssbridge.commands.dbf import ftp2odata as dbf_ftp2odata
-    Application(name="BssBridge", version=__version__, complete=True).add(command=dbf_ftp2odata()).run()
+    try:
+        Application(name="BssBridge", version=__version__, complete=True).add(command=dbf_ftp2odata()).run()
+    except KeyboardInterrupt:
+        pass

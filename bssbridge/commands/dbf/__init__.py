@@ -162,6 +162,8 @@ class ftp2odata(cleo.Command):
 
         # Нужно 2 клиента FTP. Первый для листинга, второй для операций
 
+        pause = True
+
         async with \
                 get_client(self.Params.Arguments.ftp) as client1, get_client(self.Params.Arguments.ftp) as client2, \
                 aiohttp.ClientSession(connector=aiohttp.TCPConnector(
@@ -173,6 +175,7 @@ class ftp2odata(cleo.Command):
                                      path=self.Params.Arguments.ftp.path):  # TODO: обработать рекурсивный режим
 
                     if info["type"] == "file" and path.suffix == ".dbf" and info['size']:
+                        pause = False
                         async with client2.download_stream(source=path) as stream:  # получаем поток загружаемого файла
 
                             dbf_content = await stream.read()  # читаем поток в строку байт
@@ -296,7 +299,7 @@ class ftp2odata(cleo.Command):
 
                 else:
                     try:
-                        return do_repeat(pause=0 if info else float(self.Params.Options.pause))
+                        return do_repeat(pause=float(self.Params.Options.pause) if pause else 0)
                     except:
                         pass
 
