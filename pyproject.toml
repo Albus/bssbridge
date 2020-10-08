@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "BssBridge"
-version = "0.1.5"
+version = "0.1.6"
 description = "Робот доставки данных в систему BSS"
 authors = ["Anton Rastyazhenko <rastyazhenko.anton@gmail.com>"]
 
@@ -18,6 +18,8 @@ sentry-sdk = "^0.17.8"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
+nuitka = "*"
+clcache = "*"
 
 [tool.poetry.scripts]
 bb="bssbridge:main"

@@ -3,4 +3,4 @@
 /bssbridge.egg-info
 /dist/
 /.github/
-
+/nuitka-build/

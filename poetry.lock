@@ -1,22 +1,22 @@
 [[package]]
-category = "main"
-description = "ftp client/server for asyncio"
 name = "aioftp"
+version = "0.18.0"
+description = "ftp client/server for asyncio"
+category = "main"
 optional = false
 python-versions = ">=3.7"
-version = "0.18.0"
 
 [package.extras]
 socks = ["siosocks"]
 tests = ["pytest", "pytest-asyncio", "pytest-cov", "trustme", "async-timeout", "siosocks"]
 
 [[package]]
-category = "main"
-description = "Async http client/server framework (asyncio)"
 name = "aiohttp"
+version = "3.6.2"
+description = "Async http client/server framework (asyncio)"
+category = "main"
 optional = false
 python-versions = ">=3.5.3"
-version = "3.6.2"
 
 [package.dependencies]
 async-timeout = ">=3.0,<4.0"
@@ -29,131 +29,137 @@ yarl = ">=1.0,<2.0"
 speedups = ["aiodns", "brotlipy", "cchardet"]
 
 [[package]]
-category = "main"
-description = "Timeout context manager for asyncio programs"
 name = "async-timeout"
+version = "3.0.1"
+description = "Timeout context manager for asyncio programs"
+category = "main"
 optional = false
 python-versions = ">=3.5.3"
-version = "3.0.1"
 
 [[package]]
-category = "main"
-description = "reference implementation of PEP 3156"
 name = "asyncio"
+version = "3.4.3"
+description = "reference implementation of PEP 3156"
+category = "main"
 optional = false
 python-versions = "*"
-version = "3.4.3"
 
 [[package]]
-category = "dev"
-description = "Atomic file writes."
-marker = "sys_platform == \"win32\""
 name = "atomicwrites"
+version = "1.4.0"
+description = "Atomic file writes."
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.4.0"
 
 [[package]]
-category = "main"
-description = "Classes Without Boilerplate"
 name = "attrs"
+version = "20.2.0"
+description = "Classes Without Boilerplate"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "20.2.0"
 
 [package.extras]
-dev = ["coverage (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface", "sphinx", "sphinx-rtd-theme", "pre-commit"]
+dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface", "sphinx", "sphinx-rtd-theme", "pre-commit"]
 docs = ["sphinx", "sphinx-rtd-theme", "zope.interface"]
-tests = ["coverage (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface"]
-tests_no_zope = ["coverage (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six"]
+tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "zope.interface"]
+tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six"]
 
 [[package]]
-category = "main"
-description = "Схемы BSS"
 name = "bssapi-schemas"
+version = "0.1.7"
+description = "Схемы BSS"
+category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
-version = "0.1.7"
 
 [package.dependencies]
 pydantic = ">=1.6.1,<2.0.0"
 
 [[package]]
-category = "main"
-description = "Python package for providing Mozilla's CA Bundle."
 name = "certifi"
-optional = false
-python-versions = "*"
 version = "2020.6.20"
-
-[[package]]
+description = "Python package for providing Mozilla's CA Bundle."
 category = "main"
-description = "Universal encoding detector for Python 2 and 3"
-name = "chardet"
 optional = false
 python-versions = "*"
-version = "3.0.4"
 
 [[package]]
+name = "chardet"
+version = "3.0.4"
+description = "Universal encoding detector for Python 2 and 3"
 category = "main"
-description = "Cleo allows you to create beautiful and testable command-line interfaces."
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "clcache"
+version = "4.2.0"
+description = "MSVC compiler cache"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+pymemcache = "*"
+pyuv = "*"
+
+[[package]]
 name = "cleo"
+version = "0.8.1"
+description = "Cleo allows you to create beautiful and testable command-line interfaces."
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.8.1"
 
 [package.dependencies]
 clikit = ">=0.6.0,<0.7.0"
 
 [[package]]
-category = "main"
-description = "CliKit is a group of utilities to build beautiful and testable command line interfaces."
 name = "clikit"
+version = "0.6.2"
+description = "CliKit is a group of utilities to build beautiful and testable command line interfaces."
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.6.2"
 
 [package.dependencies]
+crashtest = {version = ">=0.3.0,<0.4.0", markers = "python_version >= \"3.6\" and python_version < \"4.0\""}
 pastel = ">=0.2.0,<0.3.0"
 pylev = ">=1.3,<2.0"
 
-[package.dependencies.crashtest]
-python = ">=3.6,<4.0"
-version = ">=0.3.0,<0.4.0"
-
 [[package]]
-category = "dev"
-description = "Cross-platform colored terminal text."
-marker = "sys_platform == \"win32\""
 name = "colorama"
+version = "0.4.3"
+description = "Cross-platform colored terminal text."
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
-version = "0.4.3"
 
 [[package]]
-category = "main"
-description = "Manage Python errors with ease"
-marker = "python_version >= \"3.6\" and python_version < \"4.0\""
 name = "crashtest"
+version = "0.3.1"
+description = "Manage Python errors with ease"
+category = "main"
 optional = false
 python-versions = ">=3.6,<4.0"
-version = "0.3.1"
 
 [[package]]
-category = "main"
-description = "Internationalized Domain Names in Applications (IDNA)"
 name = "idna"
+version = "2.10"
+description = "Internationalized Domain Names in Applications (IDNA)"
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "2.10"
 
 [[package]]
-category = "main"
-description = "LZ4 Bindings for Python"
 name = "lz4"
+version = "3.1.0"
+description = "LZ4 Bindings for Python"
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "3.1.0"
 
 [package.extras]
 docs = ["sphinx (>=1.6.0)", "sphinx-bootstrap-theme"]
@@ -161,75 +167,83 @@ flake8 = ["flake8"]
 tests = ["pytest (!=3.3.0)", "psutil", "pytest-cov"]
 
 [[package]]
-category = "dev"
-description = "More routines for operating on iterables, beyond itertools"
 name = "more-itertools"
-optional = false
-python-versions = ">=3.5"
 version = "8.5.0"
-
-[[package]]
-category = "main"
-description = "multidict implementation"
-name = "multidict"
+description = "More routines for operating on iterables, beyond itertools"
+category = "dev"
 optional = false
 python-versions = ">=3.5"
-version = "4.7.6"
 
 [[package]]
+name = "multidict"
+version = "4.7.6"
+description = "multidict implementation"
 category = "main"
-description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
+optional = false
+python-versions = ">=3.5"
+
+[[package]]
+name = "nuitka"
+version = "0.6.9.2"
+description = "Python compiler with full language support and CPython compatibility"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "orjson"
+version = "3.4.0"
+description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "3.4.0"
 
 [[package]]
-category = "dev"
-description = "Core utilities for Python packages"
 name = "packaging"
+version = "20.4"
+description = "Core utilities for Python packages"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "20.4"
 
 [package.dependencies]
 pyparsing = ">=2.0.2"
 six = "*"
 
 [[package]]
-category = "main"
-description = "Bring colors to your terminal."
 name = "pastel"
+version = "0.2.1"
+description = "Bring colors to your terminal."
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.2.1"
 
 [[package]]
-category = "dev"
-description = "plugin and hook calling mechanisms for python"
 name = "pluggy"
+version = "0.13.1"
+description = "plugin and hook calling mechanisms for python"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "0.13.1"
 
 [package.extras]
 dev = ["pre-commit", "tox"]
 
 [[package]]
-category = "dev"
-description = "library with cross-python path, ini-parsing, io, code, log facilities"
 name = "py"
+version = "1.9.0"
+description = "library with cross-python path, ini-parsing, io, code, log facilities"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
-version = "1.9.0"
 
 [[package]]
-category = "main"
-description = "Data validation and settings management using python 3.6 type hinting"
 name = "pydantic"
+version = "1.6.1"
+description = "Data validation and settings management using python 3.6 type hinting"
+category = "main"
 optional = false
 python-versions = ">=3.6"
-version = "1.6.1"
 
 [package.extras]
 dotenv = ["python-dotenv (>=0.10.4)"]
@@ -237,33 +251,44 @@ email = ["email-validator (>=1.0.3)"]
 typing_extensions = ["typing-extensions (>=3.7.2)"]
 
 [[package]]
-category = "main"
-description = "A pure Python Levenshtein implementation that's not freaking GPL'd."
 name = "pylev"
+version = "1.3.0"
+description = "A pure Python Levenshtein implementation that's not freaking GPL'd."
+category = "main"
 optional = false
 python-versions = "*"
-version = "1.3.0"
 
 [[package]]
+name = "pymemcache"
+version = "3.4.0"
+description = "A comprehensive, fast, pure Python memcached client"
 category = "dev"
-description = "Python parsing module"
-name = "pyparsing"
 optional = false
-python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
-version = "2.4.7"
-
-[[package]]
-category = "dev"
-description = "pytest: simple powerful testing with Python"
-name = "pytest"
-optional = false
-python-versions = ">=3.5"
-version = "5.4.3"
+python-versions = "*"
 
 [package.dependencies]
-atomicwrites = ">=1.0"
+six = "*"
+
+[[package]]
+name = "pyparsing"
+version = "2.4.7"
+description = "Python parsing module"
+category = "dev"
+optional = false
+python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
+
+[[package]]
+name = "pytest"
+version = "5.4.3"
+description = "pytest: simple powerful testing with Python"
+category = "dev"
+optional = false
+python-versions = ">=3.5"
+
+[package.dependencies]
+atomicwrites = {version = ">=1.0", markers = "sys_platform == \"win32\""}
 attrs = ">=17.4.0"
-colorama = "*"
+colorama = {version = "*", markers = "sys_platform == \"win32\""}
 more-itertools = ">=4.0.0"
 packaging = "*"
 pluggy = ">=0.12,<1.0"
@@ -275,12 +300,20 @@ checkqa-mypy = ["mypy (v0.761)"]
 testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "requests", "xmlschema"]
 
 [[package]]
-category = "main"
-description = "Python client for Sentry (https://sentry.io)"
-name = "sentry-sdk"
+name = "pyuv"
+version = "1.4.0"
+description = "Python interface for libuv"
+category = "dev"
 optional = false
 python-versions = "*"
+
+[[package]]
+name = "sentry-sdk"
 version = "0.17.8"
+description = "Python client for Sentry (https://sentry.io)"
+category = "main"
+optional = false
+python-versions = "*"
 
 [package.dependencies]
 certifi = "*"
@@ -303,20 +336,20 @@ sqlalchemy = ["sqlalchemy (>=1.2)"]
 tornado = ["tornado (>=5)"]
 
 [[package]]
-category = "dev"
-description = "Python 2 and 3 compatibility utilities"
 name = "six"
+version = "1.15.0"
+description = "Python 2 and 3 compatibility utilities"
+category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
-version = "1.15.0"
 
 [[package]]
-category = "main"
-description = "HTTP library with thread-safe connection pooling, file post, and more."
 name = "urllib3"
+version = "1.25.10"
+description = "HTTP library with thread-safe connection pooling, file post, and more."
+category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4"
-version = "1.25.10"
 
 [package.extras]
 brotli = ["brotlipy (>=0.6.0)"]
@@ -324,29 +357,29 @@ secure = ["certifi", "cryptography (>=1.3.4)", "idna (>=2.0.0)", "pyOpenSSL (>=0
 socks = ["PySocks (>=1.5.6,<1.5.7 || >1.5.7,<2.0)"]
 
 [[package]]
-category = "dev"
-description = "Measures the displayed width of unicode strings in a terminal"
 name = "wcwidth"
+version = "0.2.5"
+description = "Measures the displayed width of unicode strings in a terminal"
+category = "dev"
 optional = false
 python-versions = "*"
-version = "0.2.5"
 
 [[package]]
-category = "main"
-description = "Yet another URL library"
 name = "yarl"
+version = "1.6.0"
+description = "Yet another URL library"
+category = "main"
 optional = false
 python-versions = ">=3.5"
-version = "1.6.0"
 
 [package.dependencies]
 idna = ">=2.0"
 multidict = ">=4.0"
 
 [metadata]
-content-hash = "0755861e800e3e9c09a5a1d31863f1455bf3ba73b0ed41bb034e0683e4c8ea37"
-lock-version = "1.0"
+lock-version = "1.1"
 python-versions = "^3.8"
+content-hash = "ed926b8e38550cf95979d0ae8192393f4ca42477055505827ebac8742bf036d6"
 
 [metadata.files]
 aioftp = [
@@ -396,6 +429,10 @@ certifi = [
 chardet = [
     {file = "chardet-3.0.4-py2.py3-none-any.whl", hash = "sha256:fc323ffcaeaed0e0a02bf4d117757b98aed530d9ed4531e3e15460124c106691"},
     {file = "chardet-3.0.4.tar.gz", hash = "sha256:84ab92ed1c4d4f16916e05906b6b75a6c0fb5db821cc65e70cbd64a3e2a5eaae"},
+]
+clcache = [
+    {file = "clcache-4.2.0-py3-none-any.whl", hash = "sha256:8c556d9ab4cb5e1a776a2a9d38106126806747778e7ccf2a612cca1f95d9678d"},
+    {file = "clcache-4.2.0.tar.gz", hash = "sha256:41bcc460098463dfaf3b2b6c5f1db91548bb1d5f4243bed3bcbb9740a579246c"},
 ]
 cleo = [
     {file = "cleo-0.8.1-py2.py3-none-any.whl", hash = "sha256:141cda6dc94a92343be626bb87a0b6c86ae291dfc732a57bf04310d4b4201753"},
@@ -471,6 +508,9 @@ multidict = [
     {file = "multidict-4.7.6-cp38-cp38-win_amd64.whl", hash = "sha256:7388d2ef3c55a8ba80da62ecfafa06a1c097c18032a501ffd4cabbc52d7f2b19"},
     {file = "multidict-4.7.6.tar.gz", hash = "sha256:fbb77a75e529021e7c4a8d4e823d88ef4d23674a202be4f5addffc72cbb91430"},
 ]
+nuitka = [
+    {file = "Nuitka-0.6.9.2.tar.gz", hash = "sha256:fe9cf05aae22ffc4242a05c9fdcf00b8d9722fadb3eb31cff8e9719423f1517d"},
+]
 orjson = [
     {file = "orjson-3.4.0-cp36-cp36m-macosx_10_7_x86_64.whl", hash = "sha256:5b7db73d295d75a25c4f3a120e141d182cbcbb240d07c1b006655269bb802508"},
     {file = "orjson-3.4.0-cp36-cp36m-manylinux2014_aarch64.whl", hash = "sha256:4fc25cd9f81de2b6e55fa7e5563973a1d47c05c86fbaf9124b1b74a08df65929"},
@@ -527,6 +567,10 @@ pylev = [
     {file = "pylev-1.3.0-py2.py3-none-any.whl", hash = "sha256:1d29a87beb45ebe1e821e7a3b10da2b6b2f4c79b43f482c2df1a1f748a6e114e"},
     {file = "pylev-1.3.0.tar.gz", hash = "sha256:063910098161199b81e453025653ec53556c1be7165a9b7c50be2f4d57eae1c3"},
 ]
+pymemcache = [
+    {file = "pymemcache-3.4.0-py2.py3-none-any.whl", hash = "sha256:f7d81053122b5c5217cd15393c0184cd6d8032c4f018ae92ce6dcdf50399f954"},
+    {file = "pymemcache-3.4.0.tar.gz", hash = "sha256:47882ab1c7e5e1dea67df8aa9faf410ce82e606fd5f29501273a60ff61d7cc99"},
+]
 pyparsing = [
     {file = "pyparsing-2.4.7-py2.py3-none-any.whl", hash = "sha256:ef9d7589ef3c200abe66653d3f1ab1033c3c419ae9b9bdb1240a85b024efc88b"},
     {file = "pyparsing-2.4.7.tar.gz", hash = "sha256:c203ec8783bf771a155b207279b9bccb8dea02d8f0c9e5f8ead507bc3246ecc1"},
@@ -534,6 +578,29 @@ pyparsing = [
 pytest = [
     {file = "pytest-5.4.3-py3-none-any.whl", hash = "sha256:5c0db86b698e8f170ba4582a492248919255fcd4c79b1ee64ace34301fb589a1"},
     {file = "pytest-5.4.3.tar.gz", hash = "sha256:7979331bfcba207414f5e1263b5a0f8f521d0f457318836a7355531ed1a4c7d8"},
+]
+pyuv = [
+    {file = "pyuv-1.4.0-cp27-cp27m-win32.whl", hash = "sha256:41df0b600b575a4f0bf4abd0a616d26abe28f5d482bfead5d3e1223a396cc5a0"},
+    {file = "pyuv-1.4.0-cp27-cp27m-win_amd64.whl", hash = "sha256:08d6a7be0c609f43bc1df9614dd6f44b5b79b4a663f67444044d10727cb26900"},
+    {file = "pyuv-1.4.0-cp27-cp27mu-manylinux1_i686.whl", hash = "sha256:9dbb06ac9d9278888c3319ea9f100eab5327f0d8ff1ff578bbaa396bb9846818"},
+    {file = "pyuv-1.4.0-cp27-cp27mu-manylinux1_x86_64.whl", hash = "sha256:6733190863b7fec3529c66fa6be51ad7c7a051b3863f378750caf2767909d5f0"},
+    {file = "pyuv-1.4.0-cp33-cp33m-manylinux1_i686.whl", hash = "sha256:95ab3fd8370fd8efcc951d669db0087477ca98b285f9fe4b40f7bb544d2cb501"},
+    {file = "pyuv-1.4.0-cp33-cp33m-manylinux1_x86_64.whl", hash = "sha256:086ddfe4ae3a4e6e41cfddabe711e5af81514f584c803b8cb59b3f2ac251c3af"},
+    {file = "pyuv-1.4.0-cp33-cp33m-win32.whl", hash = "sha256:6903640256e9427ae71a8f5f6908a28d60de51a3801073a4e5b2221adfd56688"},
+    {file = "pyuv-1.4.0-cp33-cp33m-win_amd64.whl", hash = "sha256:a380550c9867519af2f80ac8aa4d18ff11565e329c10a288b8a6e3e8f75dae5c"},
+    {file = "pyuv-1.4.0-cp34-cp34m-manylinux1_i686.whl", hash = "sha256:0c64ff74983662889be86552f19e833005f9726850cb4504aa8256fff2cf1bde"},
+    {file = "pyuv-1.4.0-cp34-cp34m-manylinux1_x86_64.whl", hash = "sha256:9f41c5d133ed75d90697a5e59cb7b64cd91c2a9a26411c2c667553103647ec77"},
+    {file = "pyuv-1.4.0-cp34-cp34m-win32.whl", hash = "sha256:1633af2b9c71c14daab0fcce8dba47ac395db2b30a1b27f842625f995320edb2"},
+    {file = "pyuv-1.4.0-cp34-cp34m-win_amd64.whl", hash = "sha256:f5e1446c2f3bb4c099808455f4b3d42299822dbd6836ccf94f90dfc8a0b3bbce"},
+    {file = "pyuv-1.4.0-cp35-cp35m-manylinux1_i686.whl", hash = "sha256:6236e9c84c0d289e66d1701abace83e9d42703503ce9b25ac49ce09f38fd0996"},
+    {file = "pyuv-1.4.0-cp35-cp35m-manylinux1_x86_64.whl", hash = "sha256:787cea7cf834315360cce5ffd08ffb15fd52b5fd12ece60799b83b4951775488"},
+    {file = "pyuv-1.4.0-cp35-cp35m-win32.whl", hash = "sha256:cc8605c0d442bf326151ed6fff1e3a8d6535c346abf3be3a115060906f9cab46"},
+    {file = "pyuv-1.4.0-cp35-cp35m-win_amd64.whl", hash = "sha256:e5ff74162e0a4fa732583872c453e1644ae8bfc9a0e3150c0da6f3df27347edf"},
+    {file = "pyuv-1.4.0-cp36-cp36m-manylinux1_i686.whl", hash = "sha256:55ec1f54b9ca2c3d7d449d7f5eb72a1ab13c77cc4a80caa438338f69ad6d8eb1"},
+    {file = "pyuv-1.4.0-cp36-cp36m-manylinux1_x86_64.whl", hash = "sha256:6a7ec1d8cbc30d2544ba42b36e668f180fa556859e2fda51dc47dfc744542446"},
+    {file = "pyuv-1.4.0-cp36-cp36m-win32.whl", hash = "sha256:08d5e8d9dadb391da7b5214b7c0347d05f2222386743dc5186fdabc8e89ddf26"},
+    {file = "pyuv-1.4.0-cp36-cp36m-win_amd64.whl", hash = "sha256:45c37e93900369e76eb45c403c005104f3b0abc9e23088c3b0ab4f8718ec7384"},
+    {file = "pyuv-1.4.0.tar.gz", hash = "sha256:caea2004d1125fe17cbde3c211c8abc72844e9b8dd7dfa007711e98fbc96fbc2"},
 ]
 sentry-sdk = [
     {file = "sentry-sdk-0.17.8.tar.gz", hash = "sha256:e159f7c919d19ae86e5a4ff370fccc45149fab461fbeb93fb5a735a0b33a9cb1"},
