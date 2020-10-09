@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 from typing import Any, Optional, Callable
 
 import orjson
+
 from clikit.api.io import flags as LogLevel
 
 __all__ = ["LogLevel"]
@@ -25,12 +26,30 @@ BaseModel.Config.json_loads = orjson.loads
 
 def main() -> None:
     import warnings
+    import cleo
+    import clikit
+    from clikit.api import event
+    from clikit.api.args.format.option import Option
+    from bssbridge.commands.dbf import ftp2odata as dbf_ftp2odata
 
     warnings.filterwarnings(action="ignore", message="unclosed", category=ResourceWarning)
 
-    from cleo import Application
-    from bssbridge.commands.dbf import ftp2odata as dbf_ftp2odata
-    try:
-        Application(name="BssBridge", version=__version__, complete=True).add(command=dbf_ftp2odata()).run()
-    except KeyboardInterrupt:
-        pass
+    config = clikit.DefaultApplicationConfig(name='bb', version=__version__)
+    config.set_catch_exceptions(False)
+    config.set_terminate_after_run(True)
+    config.set_display_name("BSS bridge")
+    config.add_option(long_name='sentry', flags=Option.OPTIONAL_VALUE | Option.STRING | Option.PREFER_LONG_NAME,
+                      description='URL логера sentry.io (https://token@host.name/id)')
+    config.add_option(long_name='bssapi', flags=Option.OPTIONAL_VALUE | Option.STRING | Option.PREFER_LONG_NAME,
+                      description='Базовый URL службы BssAPI', default='http://10.12.1.230:8000')
+    config.add_option(long_name='odata', flags=Option.REQUIRED_VALUE | Option.STRING | Option.PREFER_LONG_NAME,
+                      description='Базовый URL службы BssAPI', default='http://10.12.1.243:81/bss')
+
+    def pre_handle(ev: event.PreHandleEvent, name: str, dispatcher: event.EventDispatcher):
+        ev.command.application.config.debug(ev.io.is_debug())
+        if ev.io.is_debug():
+            ev.io.write_line(string="Включен режим отладки", flags=LogLevel.DEBUG)
+
+    config.add_event_listener(event_name=event.PRE_HANDLE, listener=pre_handle, priority=0)
+
+    cleo.Application(complete=True, config=config).add(command=dbf_ftp2odata()).run()

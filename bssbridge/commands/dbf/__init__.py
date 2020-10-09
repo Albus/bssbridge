@@ -16,6 +16,8 @@ from bssapi_schemas import exch
 from bssapi_schemas.odata import oDataUrl
 from bssapi_schemas.odata.InformationRegister import PacketsOfTabData, PacketsOfTabDataSources
 from bssapi_schemas.odata.error import Model as oDataError
+from clikit.api.config import CommandConfig
+from pydantic.class_validators import Validator
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from bssbridge import LogLevel
@@ -28,22 +30,19 @@ class ftp2odata(cleo.Command):
 
     dbf_ftp2odata
         {ftp        : URL FTP сервера (ftps://username:password@server:port/path)}
-        {odata      : URL oData сервера (https://username:password@server:port/path)}
-        {bssapi     : Базовый URL службы BssAPI (http://username:password@server:port)}
         {--delete   : Удалять файлы после обработки}
         {--pause=15 : Пауза если на сервере нет файлов}
-        {--sentry=  : URL логера sentry.io (https://token@host/id)}
     """
 
     class Params:
         class Arguments(pydantic.BaseModel):
             ftp: FtpUrl
-            odata: oDataUrl
-            bssapi: pydantic.AnyHttpUrl
 
         class Options(pydantic.BaseModel):
-            delete: pydantic.StrictBool = False
+            odata: oDataUrl
+            bssapi: pydantic.AnyHttpUrl
             sentry: typing.Optional[pydantic.HttpUrl]
+            delete: pydantic.StrictBool = False
             pause: decimal.Decimal = 15
 
     async def capture_message(self, message: str) -> None:
@@ -141,7 +140,7 @@ class ftp2odata(cleo.Command):
         async def mark_file_with_error() -> None:
             try:
                 await client2.rename(source=path, destination=path.with_suffix('.error'))
-                self.line("Файл переименован на сервере: {filename} -> {new_filename}".format(
+                self.info("Файл переименован на сервере: {filename} -> {new_filename}".format(
                     filename=path, new_filename=path.with_suffix('.error').name
                 ))
             except BaseException as exc:
@@ -153,7 +152,7 @@ class ftp2odata(cleo.Command):
         async def return_repeat(pause: typing.Optional[float] = float(self.Params.Options.pause),
                                 repeat: bool = False) -> bool:
             if repeat and pause:
-                self.line("Пауза: {pause} сек.".format(pause=pause))
+                self.info("Пауза: {pause} сек.".format(pause=pause))
                 await asyncio.sleep(pause)
             return repeat
 
@@ -172,7 +171,7 @@ class ftp2odata(cleo.Command):
             try:  # Берем итератор файлов на сервере
                 async for path, info in \
                         client1.list(recursive=False,
-                                     path=self.Params.Arguments.ftp.path):  # TODO: обработать рекурсивный режим
+                                     path=self.Params.Arguments.ftp.path):
 
                     if info["type"] == "file" and path.suffix == ".dbf" and info['size']:
                         pause = False
@@ -201,7 +200,7 @@ class ftp2odata(cleo.Command):
                                                     self.line_error("Не удалось авторизоваться на oData")
                                                     asyncio.get_running_loop().stop()
                                                 elif resp.status == 200:  # odata отвечает 200 если все прошло хорошо
-                                                    self.line("Импортирован формат {filename}".format(filename=path))
+                                                    self.info("Импортирован формат {filename}".format(filename=path))
 
                                                 else:  # odata сообщаяет об ошибке будем ее анализировать
                                                     try:  # пытаемся всунуть ответ в модель
@@ -228,7 +227,7 @@ class ftp2odata(cleo.Command):
                                         await self.capture_message("Не ожиданный ответ парсера")
 
                             except asyncio.CancelledError:
-                                self.line(text="Прерывание обращения к парсеру")
+                                self.info(text="Прерывание обращения к парсеру")
                                 return dont_repeat
 
                             except BaseException as exc:  # какаято техническая ошибка парсера
@@ -256,7 +255,7 @@ class ftp2odata(cleo.Command):
                                                 async with await save_packet_to_odata() as resp:
 
                                                     if resp.status == 200:  # odata отвечает 200 если все прошло хорошо
-                                                        self.line("Импортирован файл {filename}".format(filename=path))
+                                                        self.info("Импортирован файл {filename}".format(filename=path))
                                                         await delete()  # файл импортирован, теперь его надо удалить с сервера
                                                         continue
 
@@ -290,7 +289,7 @@ class ftp2odata(cleo.Command):
                                             continue
 
                                 except asyncio.CancelledError:
-                                    self.line(text="Прерывание обращения к парсеру")
+                                    self.info(text="Прерывание обращения к парсеру")
                                     return dont_repeat
 
                                 except BaseException as exc:  # какаято техническая ошибка парсера
@@ -311,6 +310,7 @@ class ftp2odata(cleo.Command):
             await self.capture_exception(message=None, exception=exc)
 
     def handle(self):
+
         params = {self.Params.Arguments: self.Params.Arguments(**self.argument()).dict(),
                   self.Params.Options: self.Params.Options(**self.option()).dict()}
         rows = []
@@ -343,6 +343,6 @@ class ftp2odata(cleo.Command):
                                 integrations=[AioHttpIntegration()])
 
             try:
-                asyncio.run(self.download())
+                asyncio.run(self.download(), debug=self.io.is_debug())
             except asyncio.CancelledError:
                 pass
