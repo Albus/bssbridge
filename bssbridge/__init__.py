@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
-__version__ = '0.1.9'
+__version__ = '0.1.10'
 
+import logging
 from typing import Any, Optional, Callable
 
 import orjson
@@ -19,6 +20,8 @@ def json_dumps(obj: Any, *, default: Optional[Callable[[Any], Any]] = None, opti
         option=option or 0 | orjson.OPT_INDENT_2 | orjson.OPT_OMIT_MICROSECONDS | orjson.OPT_STRICT_INTEGER
     ).decode(encoding='utf-8')
 
+
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s [%(name)s] %(message)s", datefmt="[%H:%M:%S]:")
 
 BaseModel.Config.json_dumps = json_dumps
 BaseModel.Config.json_loads = orjson.loads

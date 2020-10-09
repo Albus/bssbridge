@@ -16,8 +16,6 @@ from bssapi_schemas import exch
 from bssapi_schemas.odata import oDataUrl
 from bssapi_schemas.odata.InformationRegister import PacketsOfTabData, PacketsOfTabDataSources
 from bssapi_schemas.odata.error import Model as oDataError
-from clikit.api.config import CommandConfig
-from pydantic.class_validators import Validator
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 
 from bssbridge import LogLevel
@@ -63,7 +61,7 @@ class ftp2odata(cleo.Command):
             while True:
                 try:
                     task = asyncio.create_task(coro=func(self, *args, **kwargs))
-                except Exception as exc:
+                except:
                     raise
                 else:
                     while True:
@@ -76,7 +74,7 @@ class ftp2odata(cleo.Command):
                             return
                         else:
                             count += 1
-                            self.line("Итерация #{number}".format(number=str(count).zfill(19)))
+                            self.info("Итерация #{number}".format(number=str(count).zfill(19)))
                             if repeat:
                                 break
                             else:
@@ -100,7 +98,8 @@ class ftp2odata(cleo.Command):
             if self.Params.Options.delete:
                 try:
                     try:
-                        await client2.remove_file(path=path)
+                        async with get_client(self.Params.Arguments.ftp) as client:
+                            await client.remove_file(path=path)
                     except aioftp.StatusCodeError as err:
                         if aioftp.Code('550') not in err.received_codes:
                             raise err
@@ -115,7 +114,7 @@ class ftp2odata(cleo.Command):
                            value=lz4.block.compress(mode='fast', source=dbf_content),
                            filename=path.name, content_transfer_encoding='base64')
             return session.post(
-                url='{base_bssapi_url}/parser/dbf/source'.format(base_bssapi_url=self.Params.Arguments.bssapi),
+                url='{base_bssapi_url}/parser/dbf/source'.format(base_bssapi_url=self.Params.Options.bssapi),
                 data=data, chunked=1000, compress=False, params={'url': self.Params.Arguments.ftp})
 
         async def get_format_from_parser() -> aiohttp.client._RequestContextManager:
@@ -124,17 +123,17 @@ class ftp2odata(cleo.Command):
                            value=lz4.block.compress(mode='fast', source=dbf_content),
                            filename=path.name, content_transfer_encoding='base64')
             return session.post(
-                url='{base_bssapi_url}/parser/dbf/format'.format(base_bssapi_url=self.Params.Arguments.bssapi),
+                url='{base_bssapi_url}/parser/dbf/format'.format(base_bssapi_url=self.Params.Options.bssapi),
                 data=data, chunked=1000, compress=False, params={'url': self.Params.Arguments.ftp})
 
         async def save_packet_to_odata() -> aiohttp.client._RequestContextManager:
             return session.post(url=packet_of_tab_data.path(
-                base_url=self.Params.Arguments.odata), data=packet_of_tab_data.json(),
+                base_url=self.Params.Options.odata), data=packet_of_tab_data.json(),
                 headers={'Content-type': 'application/json'})
 
         async def save_format_to_odata() -> aiohttp.client._RequestContextManager:
             return session.post(url=format_of_tab_data.path(
-                base_url=self.Params.Arguments.odata), data=format_of_tab_data.json(),
+                base_url=self.Params.Options.odata), data=format_of_tab_data.json(),
                 headers={'Content-type': 'application/json'})
 
         async def mark_file_with_error() -> None:
@@ -343,6 +342,7 @@ class ftp2odata(cleo.Command):
                                 integrations=[AioHttpIntegration()])
 
             try:
-                asyncio.run(self.download(), debug=self.io.is_debug())
+                with aioftp.setlocale('C'):
+                    asyncio.run(self.download(), debug=self.io.is_debug())
             except asyncio.CancelledError:
                 pass
