@@ -21,8 +21,6 @@ def json_dumps(obj: Any, *, default: Optional[Callable[[Any], Any]] = None, opti
     ).decode(encoding='utf-8')
 
 
-logging.basicConfig(level=logging.WARNING, format="%(asctime)s [%(name)s] %(message)s", datefmt="[%H:%M:%S]:")
-
 BaseModel.Config.json_dumps = json_dumps
 BaseModel.Config.json_loads = orjson.loads
 
@@ -41,17 +39,24 @@ def main() -> None:
     config.set_catch_exceptions(False)
     config.set_terminate_after_run(True)
     config.set_display_name("BSS bridge")
-    config.add_option(long_name='sentry', flags=Option.OPTIONAL_VALUE | Option.STRING | Option.PREFER_LONG_NAME,
+    config.add_option(long_name='sentry', flags=Option.REQUIRED_VALUE | Option.STRING | Option.PREFER_LONG_NAME,
                       description='URL логера sentry.io (https://token@host.name/id)')
-    config.add_option(long_name='bssapi', flags=Option.OPTIONAL_VALUE | Option.STRING | Option.PREFER_LONG_NAME,
+    config.add_option(long_name='bssapi', flags=Option.REQUIRED_VALUE | Option.STRING | Option.PREFER_LONG_NAME,
                       description='Базовый URL службы BssAPI', default='http://10.12.1.230:8000')
     config.add_option(long_name='odata', flags=Option.REQUIRED_VALUE | Option.STRING | Option.PREFER_LONG_NAME,
                       description='Базовый URL службы BssAPI', default='http://10.12.1.243:81/bss')
 
     def pre_handle(ev: event.PreHandleEvent, name: str, dispatcher: event.EventDispatcher):
         ev.command.application.config.debug(ev.io.is_debug())
+        logging_level: Optional[int] = None
         if ev.io.is_debug():
+            logging_level = logging.DEBUG
             ev.io.write_line(string="Включен режим отладки", flags=LogLevel.DEBUG)
+        elif ev.io.is_very_verbose():
+            logging_level = logging.INFO
+        else:
+            logging_level = logging.WARN
+        logging.basicConfig(level=logging_level, format="%(asctime)s [%(name)s] %(message)s", datefmt="[%H:%M:%S]:")
 
     config.add_event_listener(event_name=event.PRE_HANDLE, listener=pre_handle, priority=0)
 

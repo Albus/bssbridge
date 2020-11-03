@@ -52,6 +52,7 @@ class ftp2odata(cleo.Command):
         if message:
             self.line_error(message)
         if self.Params.Options.sentry:
+
             sentry_sdk.capture_exception(exception)
 
     def repeat(fn):
@@ -138,10 +139,10 @@ class ftp2odata(cleo.Command):
 
         async def mark_file_with_error() -> None:
             try:
-                await client2.rename(source=path, destination=path.with_suffix('.error'))
-                self.info("Файл переименован на сервере: {filename} -> {new_filename}".format(
-                    filename=path, new_filename=path.with_suffix('.error').name
-                ))
+                async with get_client(self.Params.Arguments.ftp) as client:
+                    await client.rename(source=path, destination=path.with_suffix('.error'))
+                    self.info("Файл переименован на сервере: {filename} -> {new_filename}".format(
+                        filename=path, new_filename=path.with_suffix('.error').name))
             except BaseException as exc:
                 await self.capture_exception(
                     message="Не удалось переименовать файл на сервере: {filename} -> {new_filename}".format(

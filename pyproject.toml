@@ -19,7 +19,6 @@ sentry-sdk = "^0.17.8"
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"
 nuitka = "*"
-clcache = "*"
 
 [tool.poetry.scripts]
 bb="bssbridge:main"
